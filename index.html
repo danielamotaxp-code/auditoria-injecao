@@ -206,10 +206,10 @@ ul.files .fn{flex:1 1 220px;overflow-wrap:anywhere;font-size:14px}
       <div class="seg" id="fEmp" role="group" aria-label="Empresa"></div>
       <div class="seg" id="fStatus" role="group" aria-label="Situação"></div>
       <input type="text" id="fBusca" placeholder="Buscar por nome ou instalação" aria-label="Buscar">
-      <button type="button" class="btn ghost" id="listaAtualizar">Atualizar</button>
+      <button type="button" class="btn ghost" id="listaAtualizar">Atualizar da planilha</button>
     </div>
     <div id="lista"></div>
-    <p class="small">A lista vem das abas AUD - CANCELAMENTO OP 1, AUD - VERIFICAÇÃO e AUD - INADIMPLENTES da planilha CANCELAMENTOS E AUDITORIAS e é atualizada de hora em hora nos dias úteis.</p>
+    <p class="small">A lista vem das abas AUD - CANCELAMENTO OP 1, AUD - VERIFICAÇÃO e AUD - INADIMPLENTES da planilha CANCELAMENTOS E AUDITORIAS. Depois de mexer na planilha, clique em <b>Atualizar da planilha</b> (leva uns 30 segundos). Ela também se atualiza sozinha de hora em hora nos dias úteis.</p>
   </div>
 </section>
 <section id="tab-arquivo" hidden>
@@ -1726,7 +1726,33 @@ function renderLista(){
 }
 $('fBusca').value=filtros.busca||'';
 $('fBusca').addEventListener('input', function(){ filtros.busca=this.value; renderLista(); });
-$('listaAtualizar').addEventListener('click', function(){ carregarLista(); });
+async function atualizarDaPlanilha(){
+  var b=$('listaAtualizar'); if (b.disabled) return;
+  var info=$('listaInfo'), t0=Date.now()-15000, base='/repos/'+DONO+'/'+REPO_DADOS+'/actions';
+  b.disabled=true; b.textContent='Lendo a planilha…';
+  try{
+    await gh(sessao.token,'POST',base+'/workflows/atualizar-lista.yml/dispatches',{ ref:'main' });
+    info.textContent='Lendo a planilha CANCELAMENTOS E AUDITORIAS… (uns 30 segundos)';
+    var run=null, fim=Date.now()+180000;
+    while (Date.now()<fim){
+      await new Promise(function(r){ setTimeout(r, 4000); });
+      var j=await (await gh(sessao.token,'GET',base+'/workflows/atualizar-lista.yml/runs?event=workflow_dispatch&per_page=5')).json();
+      run=(j.workflow_runs||[]).find(function(x){ return Date.parse(x.created_at)>=t0; })||null;
+      if (run && run.status==='completed') break;
+      info.textContent = run ? 'Atualizando a lista… ('+Math.round((Date.now()-t0)/1000-15)+' s)' : 'Esperando o GitHub começar…';
+    }
+    if (!run || run.status!=='completed') throw new Error('demorou mais que o normal; tente de novo em 1 minuto');
+    if (run.conclusion!=='success') throw new Error('a leitura da planilha falhou');
+    var antes=registro&&registro.itens?registro.itens.length:0;
+    await carregarLista();
+    var depois=registro&&registro.itens?registro.itens.length:0;
+    var erros=(registro&&registro.erros)||[];
+    toast(erros.length ? 'Atualizada com avisos: '+erros.join(' | ') : depois>antes ? (depois-antes)+' auditoria(s) nova(s) na lista.' : 'Lista atualizada. Nenhuma auditoria nova.');
+  }catch(e){
+    info.textContent = e.status===403||e.status===404 ? 'A chave não tem permissão de Ações (Actions: Read and write) no auditoria-dados. Refaça a chave e os acessos.' : 'Não consegui atualizar da planilha: '+e.message+'.';
+  }finally{ b.disabled=false; b.textContent='Atualizar da planilha'; }
+}
+$('listaAtualizar').addEventListener('click', atualizarDaPlanilha);
 
 async function baixarArquivo(caminho){
   var r=await gh(sessao.token,'GET',conteudo(REPO_DADOS,caminho),null,'application/vnd.github.raw');
