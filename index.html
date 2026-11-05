@@ -1777,10 +1777,10 @@ function mostrarVinculo(){
   if (!vinculo){ v.hidden=true; $('salvarRow').hidden=true; return; }
   v.hidden=false;
   v.innerHTML='<b>Auditoria da lista</b>'+esc(vinculo.numero+'. AUD - '+vinculo.nome)+' · '+esc(tipoNome(vinculo.tipo))+' · '+(vinculo.empresa==='WEGEN'?'WeGen':'SmartBen')+
-    '. Ao terminar, salve a planilha na pasta do cliente. <button type="button" class="linkbtn" id="desvincular">Desvincular</button>';
+    '. Ao terminar, a planilha é salva sozinha na pasta do cliente. <button type="button" class="linkbtn" id="desvincular">Desvincular</button>';
   $('desvincular').addEventListener('click', function(){ vinculo=null; mostrarVinculo(); App.livre&&App.livre(); });
 }
-document.addEventListener('aud:pronto', function(){ $('salvarRow').hidden = !vinculo; $('salvarMsg').textContent = vinculo ? 'Vai para: '+vinculo.pasta.replace(/^AUDITORIAS\//,'').split('/').join(' › ') : ''; });
+document.addEventListener('aud:pronto', function(){ $('salvarRow').hidden = !vinculo; $('salvarMsg').textContent = vinculo ? 'Salvando em: '+vinculo.pasta.replace(/^AUDITORIAS\//,'').split('/').join(' › ')+'…' : ''; if (vinculo) $('salvar').click(); });
 $('salvar').addEventListener('click', async function(){
   var out=App.out(); if (!out || !vinculo) return;
   var b=this, caminho=vinculo.pasta+'/'+App.fileName();
@@ -1794,7 +1794,7 @@ $('salvar').addEventListener('click', async function(){
     $('salvarMsg').textContent='Salvo em '+vinculo.pasta.replace(/^AUDITORIAS\//,'').split('/').join(' › ')+' ('+(sha?'substituiu a anterior':'novo')+').';
     toast('Planilha salva na pasta do cliente.');
   }catch(e){ $('salvarMsg').textContent = e.status===401 ? 'A chave de acesso expirou.' : e.status===409 ? 'O arquivo mudou enquanto salvava; clique de novo.' : 'Não consegui salvar: '+e.message; }
-  finally{ b.disabled=false; b.textContent='Salvar na pasta do cliente'; }
+  finally{ b.disabled=false; b.textContent='Salvar de novo'; }
 });
 
 /* ---------- arquivo (pastas) ---------- */
