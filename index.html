@@ -1319,6 +1319,7 @@ function check(){
   else if (!$('cliente').value.trim()) msg='Informe o nome do cliente.';
   else if (!state.root) msg='Conecte a pasta do Z: (passo 2).';
   else if ($('base-cliente').checked && !state.xlsx) msg='Escolha a planilha do cliente.';
+  else if (state.exigePeriodo && (!$('ini').value || !$('fim').value)) msg='Informe o período do cliente: entrada (De) e saída (Até).';
   else { var f=faixa(); if (f && f.a>f.b) msg='O período de entrada (De) precisa ser antes do de saída (Até).'; }
   $('run').disabled=!!msg; setStatus(msg||'Pronto para rodar.');
 }
@@ -1593,10 +1594,13 @@ window.AudApp = {
   preencher: function(o){
     $('codigo').value=o.instalacao||''; $('cliente').value=o.nome||''; $('numero').value=o.numero||'';
     if (o.empresa) setEmp(o.empresa==='SMARTBEN'?'SmartBen':'WeGen');
+    $('ini').value=''; $('fim').value=''; state.exigePeriodo=true;
+    $('perHint').innerHTML='<b>Obrigatório.</b> Informe o mês de entrada e de saída do cliente. As datas da lista (solicitação e data final) são só o prazo para gerar a auditoria e não entram aqui.';
     if (o.arquivo){ state.xlsx=o.arquivo; $('base-cliente').checked=true; $('clientRow').hidden=false; $('xlsxName').textContent=o.arquivo.name+' (planilha salva na pasta do cliente)'; }
     else { state.xlsx=null; $('xlsxInput').value=''; $('base-modelo').checked=true; $('clientRow').hidden=true; $('xlsxName').textContent='Nenhum arquivo escolhido'; }
     state.out=null; $('dlRow').hidden=true; $('notes').innerHTML=''; check();
   },
+  livre: function(){ state.exigePeriodo=false; $('perHint').textContent='Opcional. Com as datas, só as pastas desses meses são abertas e só esses períodos entram na planilha. Sem datas, procura em tudo.'; check(); },
   out: function(){ return state.out; }, fileName: function(){ return fileName(); }, rodando: function(){ return state.running; }
 };
 /* ---------- início ---------- */
@@ -1708,7 +1712,7 @@ function renderLista(){
       var d=document.createElement('div'); d.className='aud'+(x.status==='feita'?' feita':'');
       var chip = x.status==='feita' ? '<span class="chip ok">planilha salva</span>' : x.status==='fora_planilha' ? '<span class="chip off">fora da planilha</span>' : '<span class="chip run">a fazer</span>';
       d.innerHTML='<div class="aud-main"><span class="aud-n">'+x.numero+'.</span><div class="aud-t"><b>'+esc(x.nome)+'</b>'+chip+
-        '<span class="small">'+(x.instalacao?'Instalação <span class="mono">'+esc(x.instalacao)+'</span> · ':'')+(x.data_solicitacao?'solicitado em '+esc(x.data_solicitacao):'')+(x.data_final?' · data final '+esc(x.data_final):'')+(x.colaborador?' · '+esc(x.colaborador):'')+'</span>'+
+        '<span class="small">'+(x.instalacao?'Instalação <span class="mono">'+esc(x.instalacao)+'</span> · ':'')+(x.data_solicitacao?'solicitada em '+esc(x.data_solicitacao):'')+(x.data_final?' · gerar até '+esc(x.data_final):'')+(x.colaborador?' · '+esc(x.colaborador):'')+'</span>'+
         (x.motivo?'<span class="small motivo">'+esc(x.motivo)+'</span>':'')+'</div></div>';
       var acts=document.createElement('div'); acts.className='aud-acts';
       if (x.instalacao){ var b1=document.createElement('button'); b1.type='button'; b1.className='btn primary-sm'; b1.textContent= x.status==='feita' ? 'Refazer auditoria' : 'Fazer auditoria';
@@ -1748,7 +1752,7 @@ function mostrarVinculo(){
   v.hidden=false;
   v.innerHTML='<b>Auditoria da lista</b>'+esc(vinculo.numero+'. AUD - '+vinculo.nome)+' · '+esc(tipoNome(vinculo.tipo))+' · '+(vinculo.empresa==='WEGEN'?'WeGen':'SmartBen')+
     '. Ao terminar, salve a planilha na pasta do cliente. <button type="button" class="linkbtn" id="desvincular">Desvincular</button>';
-  $('desvincular').addEventListener('click', function(){ vinculo=null; mostrarVinculo(); });
+  $('desvincular').addEventListener('click', function(){ vinculo=null; mostrarVinculo(); App.livre&&App.livre(); });
 }
 document.addEventListener('aud:pronto', function(){ $('salvarRow').hidden = !vinculo; $('salvarMsg').textContent = vinculo ? 'Vai para: '+vinculo.pasta.replace(/^AUDITORIAS\//,'').split('/').join(' › ') : ''; });
 $('salvar').addEventListener('click', async function(){
