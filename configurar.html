@@ -51,7 +51,7 @@ function linha(nome = "", senha = "") {
   d.querySelector(".nome").value = nome; d.querySelector(".senha").value = senha;
   d.querySelector("button").onclick = () => d.remove(); $("#users").appendChild(d);
 }
-["Daniela", "Laura", "Paula", "Luiz", "Guilherme"].forEach(x => linha(x));
+["Daniela", "Laura", "Paula", "Luis", "Guilherme"].forEach(x => linha(x));
 $("#add").onclick = () => linha();
 function msg(html, erro) { const m = $("#msg"); m.className = erro ? "note" : "ok"; m.innerHTML = html; m.hidden = false; }
 $("#salvar").onclick = async () => {
