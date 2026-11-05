@@ -1,36 +1,36 @@
 {
- "versao": 1,
- "atualizado_em": "2026-11-05T14:49:42.793Z",
- "usuarios": {
-  "Daniela": {
-   "salt": "f0SFDHOrRr8OM6oAFeuETg==",
-   "iv": "Hcx0cuSAIoCLMbuG",
-   "dados": "4aDKhPUwAcYjvy2L4FISekBbT3oZnMO6UmT/Y8Gli9XofY0ItGfC4377fi0ukHBH16KATTPzKqIJxdMaGJtYRcYAq6lOlI2AJ8PD9Sr0HB2AilRJJ81MhWjEOqXfzRA0iK/lh70bKYjIrvHrqAe1EhVhGpK9bsq8NA==",
-   "iter": 600000
-  },
-  "Laura": {
-   "salt": "Ctjodmh5zjYY05DY9TRxyA==",
-   "iv": "2KtbZ3S0K2R8jSQo",
-   "dados": "i+KBiwK/bUMztQVKvAyVWwBMuoIIeIJNnf12DymuwkbFaqf0TI1njTqHNhXO0WCC/6XEp1dgqpx6HmVISb+w3sE02ImrJ0+Lpwa3Gdf/fHZ0YmMucS8b4hs6eroIt0jo6C/brMloT83F+VUJxouXnFggpn+xOmhamA==",
-   "iter": 600000
-  },
-  "Paula": {
-   "salt": "BlJmcawENQm/8RTK6qjTLw==",
-   "iv": "YxU17baymI6UdDmK",
-   "dados": "M8U8j/c9UsxIss2cE0v6KDYKoymk6uK/pbzODgDKcXZZ8s+NMjUIZuXuEdW1w7CIwpizVYMhIPzjVVzUgk/4DXs8mzz1aKj5ltgdhaoDYB/9sLm5RkqjM5v7kgTu7Buu/Zw6kG5VghXw5VtdPB9S7aoWWqrWFnLJpA==",
-   "iter": 600000
-  },
-  "Luiz": {
-   "salt": "Yr4zDH67Jks0lDZP5jrRLQ==",
-   "iv": "p1K/jT5aYkJvxc00",
-   "dados": "oGsGZgCh8IwVLl8OM7bwqmw3Y4t0fUt/ZKfFnp/jw/CKqMlvNv1CkarTFsNJiUFrip3Vzjm31WReyjruT+W8q9lTvSqncoVSlSKQr0NB5petp3q0Wzctl37TQsKO1vF2QawSd9flefqyV1r4iVUlSzNqJs1+ceekmw==",
-   "iter": 600000
-  },
-  "Guilherme": {
-   "salt": "WaRCm4sZQf0qevOoSU0uug==",
-   "iv": "/LYoiZbCSFdeHeeY",
-   "dados": "Gbbzr1tbDf4zDjwi7UHmqmRbEs8kQ9okcrywbC5cugYcHE0JxH98ClWrS94kbWA5vAAhrdyCc1Ws9ezIQWqrlmmBHPNLx4oqZqeiC3atluZmVNGdgXaFqHxG1j4ALMgx/rPjNZOVM9HDDshGMdj4t4AemH0G7q/k3w==",
-   "iter": 600000
+  "versao": 1,
+  "atualizado_em": "2026-11-05T14:49:42.793Z",
+  "usuarios": {
+    "Daniela": {
+      "salt": "f0SFDHOrRr8OM6oAFeuETg==",
+      "iv": "Hcx0cuSAIoCLMbuG",
+      "dados": "4aDKhPUwAcYjvy2L4FISekBbT3oZnMO6UmT/Y8Gli9XofY0ItGfC4377fi0ukHBH16KATTPzKqIJxdMaGJtYRcYAq6lOlI2AJ8PD9Sr0HB2AilRJJ81MhWjEOqXfzRA0iK/lh70bKYjIrvHrqAe1EhVhGpK9bsq8NA==",
+      "iter": 600000
+    },
+    "Laura": {
+      "salt": "Ctjodmh5zjYY05DY9TRxyA==",
+      "iv": "2KtbZ3S0K2R8jSQo",
+      "dados": "i+KBiwK/bUMztQVKvAyVWwBMuoIIeIJNnf12DymuwkbFaqf0TI1njTqHNhXO0WCC/6XEp1dgqpx6HmVISb+w3sE02ImrJ0+Lpwa3Gdf/fHZ0YmMucS8b4hs6eroIt0jo6C/brMloT83F+VUJxouXnFggpn+xOmhamA==",
+      "iter": 600000
+    },
+    "Paula": {
+      "salt": "BlJmcawENQm/8RTK6qjTLw==",
+      "iv": "YxU17baymI6UdDmK",
+      "dados": "M8U8j/c9UsxIss2cE0v6KDYKoymk6uK/pbzODgDKcXZZ8s+NMjUIZuXuEdW1w7CIwpizVYMhIPzjVVzUgk/4DXs8mzz1aKj5ltgdhaoDYB/9sLm5RkqjM5v7kgTu7Buu/Zw6kG5VghXw5VtdPB9S7aoWWqrWFnLJpA==",
+      "iter": 600000
+    },
+    "Luis": {
+      "salt": "Yr4zDH67Jks0lDZP5jrRLQ==",
+      "iv": "p1K/jT5aYkJvxc00",
+      "dados": "oGsGZgCh8IwVLl8OM7bwqmw3Y4t0fUt/ZKfFnp/jw/CKqMlvNv1CkarTFsNJiUFrip3Vzjm31WReyjruT+W8q9lTvSqncoVSlSKQr0NB5petp3q0Wzctl37TQsKO1vF2QawSd9flefqyV1r4iVUlSzNqJs1+ceekmw==",
+      "iter": 600000
+    },
+    "Guilherme": {
+      "salt": "WaRCm4sZQf0qevOoSU0uug==",
+      "iv": "/LYoiZbCSFdeHeeY",
+      "dados": "Gbbzr1tbDf4zDjwi7UHmqmRbEs8kQ9okcrywbC5cugYcHE0JxH98ClWrS94kbWA5vAAhrdyCc1Ws9ezIQWqrlmmBHPNLx4oqZqeiC3atluZmVNGdgXaFqHxG1j4ALMgx/rPjNZOVM9HDDshGMdj4t4AemH0G7q/k3w==",
+      "iter": 600000
+    }
   }
- }
 }
