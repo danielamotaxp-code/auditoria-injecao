@@ -1,4 +1,4 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>body{margin:0}[hidden]{display:none!important}</style></head><body>
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"><style>body{margin:0}[hidden]{display:none!important}</style></head><body>
 <title>Auditoria de Injeção</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -136,12 +136,40 @@ pre.snip{white-space:pre-wrap;word-break:break-all;font-family:var(--f-mono);fon
 th.cc,td.cc{background:var(--grid-soft)}
 thead th.cc{color:var(--grid)}
 
-.login{min-height:70vh;display:flex;align-items:center;justify-content:center}
+.login{min-height:70vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
 .login form{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:28px 24px;display:flex;flex-direction:column;gap:14px;width:100%;max-width:360px}
 .login h1{font-size:26px}
-.login input{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
+.login input,.login select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
 .login .err{color:var(--warn);font-size:14px;min-height:1.3em}
-.userbar{max-width:980px;margin:0 auto 12px;display:flex;justify-content:flex-end;gap:10px;align-items:center;font-size:13.5px;color:var(--muted)}
+.userbar{max-width:980px;margin:0 auto 18px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.userbar .who{display:flex;gap:10px;align-items:center;font-size:13.5px;color:var(--muted)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px}
+.tabs button{font:inherit;font-weight:600;font-size:14px;border:0;background:transparent;color:var(--muted);padding:8px 14px;border-radius:7px;cursor:pointer}
+.tabs button[aria-current="page"]{background:var(--grid);color:var(--grid-ink)}
+.filtros{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filtros .seg{flex:0 1 auto}
+.filtros .seg button{padding:7px 12px;font-size:13.5px}
+.filtros input{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 11px;min-width:0;flex:1 1 200px}
+h3.grp{font-family:var(--f-display);font-size:16px;margin:12px 0 4px;color:var(--grid)}
+.aud-list{display:flex;flex-direction:column;gap:6px}
+.aud{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:10px 12px;flex-wrap:wrap;background:var(--surface)}
+.aud.feita{border-color:var(--ok)}
+.aud-main{display:flex;gap:10px;min-width:0;flex:1 1 380px}
+.aud-n{font-family:var(--f-display);font-weight:800;color:var(--grid);min-width:26px}
+.aud-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.aud-t b{font-weight:600}.aud-t .chip{margin-left:0}
+.aud-t .motivo{overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.aud-acts{display:flex;gap:6px;flex-wrap:wrap}
+.mono{font-family:var(--f-mono)}
+.emp{margin:6px 0 2px}
+details.pasta{border:1px solid var(--line);border-radius:8px;margin:4px 0;background:var(--surface)}
+details.pasta summary{cursor:pointer;padding:8px 12px;display:flex;justify-content:space-between;gap:10px}
+details.pasta summary .c{color:var(--muted);font-size:13px}
+ul.files{list-style:none;margin:0;padding:0 12px 10px;display:flex;flex-direction:column;gap:6px}
+ul.files li{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+ul.files .fn{flex:1 1 220px;overflow-wrap:anywhere;font-size:14px}
+.linkbtn{font:inherit;background:none;border:0;color:var(--grid);text-decoration:underline;cursor:pointer;padding:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;z-index:20;max-width:90vw}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -149,19 +177,50 @@ thead th.cc{color:var(--grid)}
   <form id="loginForm" autocomplete="on">
     <span class="eyebrow">WeGen · SmartBen</span>
     <h1>Auditoria de Injeção</h1>
-    <div class="field"><label for="lgUser">Usuário</label><input id="lgUser" name="username" autocomplete="username" placeholder="Ex.: Daniela" required></div>
+    <div class="field"><label for="lgUser">Quem é você</label><select id="lgUser"></select></div>
     <div class="field"><label for="lgPass">Senha</label><input id="lgPass" name="password" type="password" autocomplete="current-password" required></div>
     <span class="err" id="lgErr" role="alert"></span>
     <button type="submit" class="btn primary" id="lgBtn">Entrar</button>
   </form>
+  <div class="note warn" id="semConfig" hidden><b>Acessos não configurados</b>A dona do site precisa criar os logins em <a href="configurar.html">Configurar acessos</a>.</div>
 </div>
-<div class="userbar" id="userbar" hidden><span id="lgWho"></span><button type="button" class="btn ghost" id="lgOut">Sair</button></div>
+<div class="userbar" id="userbar" hidden>
+  <nav class="tabs" aria-label="Seções">
+    <button type="button" id="nav-lista" data-aba="lista">Lista de auditorias</button>
+    <button type="button" id="nav-auditoria" data-aba="auditoria">Fazer auditoria</button>
+    <button type="button" id="nav-arquivo" data-aba="arquivo">Arquivo</button>
+  </nav>
+  <span class="who"><span id="lgWho"></span><button type="button" class="btn ghost" id="lgOut">Sair</button></span>
+</div>
 <div class="wrap" id="app" hidden>
 <header>
   <span class="eyebrow">WeGen · SmartBen</span>
   <h1>Auditoria de Injeção</h1>
   <p class="lede">Procura a instalação do cliente nos relatórios gerais (último dia de cada mês) de Faturamento, 2024, 2025 e 2026 e devolve a planilha de auditoria preenchida. Tudo roda no seu navegador: os relatórios e a planilha não saem do computador.</p>
 </header>
+<section id="tab-lista" hidden>
+  <div class="card">
+    <div class="card-head"><div><h2>Lista de auditorias</h2><p id="listaInfo" class="small">Carregando…</p></div></div>
+    <div class="filtros">
+      <div class="seg" id="fTipo" role="group" aria-label="Tipo de auditoria"></div>
+      <div class="seg" id="fEmp" role="group" aria-label="Empresa"></div>
+      <div class="seg" id="fStatus" role="group" aria-label="Situação"></div>
+      <input type="text" id="fBusca" placeholder="Buscar por nome ou instalação" aria-label="Buscar">
+      <button type="button" class="btn ghost" id="listaAtualizar">Atualizar</button>
+    </div>
+    <div id="lista"></div>
+    <p class="small">A lista vem das abas AUD - CANCELAMENTO OP 1, AUD - VERIFICAÇÃO e AUD - INADIMPLENTES da planilha CANCELAMENTOS E AUDITORIAS e é atualizada de hora em hora nos dias úteis.</p>
+  </div>
+</section>
+<section id="tab-arquivo" hidden>
+  <div class="card">
+    <div class="card-head"><div><h2>Arquivo</h2><p class="small">Pastas por tipo de auditoria e empresa, igual à pasta do computador.</p></div></div>
+    <div class="filtros"><input type="text" id="aBusca" placeholder="Buscar pasta" aria-label="Buscar pasta"><button type="button" class="btn ghost" id="arquivoAtualizar">Atualizar</button></div>
+    <div id="pastas"></div>
+  </div>
+</section>
+<div id="tab-auditoria" hidden>
+<div class="note info" id="vinculo" hidden></div>
 
 <section class="card" aria-labelledby="h-dados">
   <div class="card-head"><span class="num">1</span><div><h2 id="h-dados">Dados da auditoria</h2></div></div>
@@ -208,10 +267,14 @@ thead th.cc{color:var(--grid)}
   <div class="tbl"><table id="prev"><thead></thead><tbody></tbody></table></div>
   <div class="notes" id="notes"></div>
   <div class="row" id="dlRow" hidden><button type="button" class="btn sun" id="dl">Baixar planilha</button><span class="small" id="dlMsg"></span></div>
+  <div class="row" id="salvarRow" hidden><button type="button" class="btn primary-sm" id="salvar">Salvar na pasta do cliente</button><span class="small" id="salvarMsg"></span></div>
 </section>
 </div>
+</div>
+<div class="toast" id="toast" hidden></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="comum.js"></script>
 <script>
 /* Núcleo da Auditoria de Injeção: leitura dos relatórios gerais e edição da planilha (.xlsx) */
 (function (root) {
@@ -1502,7 +1565,7 @@ async function run(){
     var semCC=out.preview.filter(function(r){ return r.cons==null; }).map(function(r){ return r.label; });
     note('info','Consumo e Compensação', 'Consumo preenchido a partir dos relatórios na aba "'+out.saldoSheet+'" ('+out.ccFilled+' célula(s)).'+(semCC.length?' Sem consumo no relatório (ficaram como estavam): '+semCC.slice(0,8).join(', ')+(semCC.length>8?'…':'')+'.':'')+' A COMPENSAÇÃO fica para você preencher; o SALDO já tem as fórmulas e recalcula sozinho.');
     $('dlRow').hidden=false; $('dlMsg').textContent=fileName();
-    prog(100, 'Concluído em '+elapsed(t0)+'.'); setStatus('Pronto. Confira a tabela e baixe a planilha.');
+    prog(100, 'Concluído em '+elapsed(t0)+'.'); setStatus('Pronto. Confira a tabela e baixe a planilha.'); document.dispatchEvent(new CustomEvent('aud:pronto'));
   }catch(e){
     if (e){ note('warn','Parado', e.message); $('resSub').textContent='A auditoria parou antes de gerar a planilha.'; setStatus('Erro: '+e.message, true); }
     else setStatus('Instalação não encontrada.', true);
@@ -1525,6 +1588,17 @@ $('dl').addEventListener('click', async function(){
   catch(e){ $('dlMsg').textContent = e && e.code==='declined' ? 'Download cancelado.' : 'Não foi possível baixar ('+(e&&e.code||e)+').'; }
 });
 
+/* ---------- ligação com a lista de auditorias ---------- */
+window.AudApp = {
+  preencher: function(o){
+    $('codigo').value=o.instalacao||''; $('cliente').value=o.nome||''; $('numero').value=o.numero||'';
+    if (o.empresa) setEmp(o.empresa==='SMARTBEN'?'SmartBen':'WeGen');
+    if (o.arquivo){ state.xlsx=o.arquivo; $('base-cliente').checked=true; $('clientRow').hidden=false; $('xlsxName').textContent=o.arquivo.name+' (planilha salva na pasta do cliente)'; }
+    else { state.xlsx=null; $('xlsxInput').value=''; $('base-modelo').checked=true; $('clientRow').hidden=true; $('xlsxName').textContent='Nenhum arquivo escolhido'; }
+    state.out=null; $('dlRow').hidden=true; $('notes').innerHTML=''; check();
+  },
+  out: function(){ return state.out; }, fileName: function(){ return fileName(); }, rodando: function(){ return state.running; }
+};
 /* ---------- início ---------- */
 renderTable(['3000066048 - VRA','3014971324 - VGA'], [
   {label:'jun/26',values:[1385,610],sum:1995},{label:'jul/26',values:[1310,702],sum:2012},{label:'ago/26',values:[0,0],sum:0},{label:'set/26',values:[1398,655],sum:2053}]);
@@ -1533,25 +1607,222 @@ if (FS_OK) (async function(){ var h=await dbGet('h','root'); if (h && !state.roo
 })();
 </script>
 <script>
+/* ===== Login, abas, lista de auditorias e armazenamento (repositório auditoria-dados) ===== */
 (function(){
-  'use strict';
-  var ACESSOS = {"salt": "auditoria-injecao-v1", "users": {"daniela": "5a595e709fe913e096375c67d32cccf470a666cc14bb3f7e2fd74bf58f76f013", "laura": "3a623423f28d118bf8b34376f7176676f7903a1e2f56920d400760f3fb4b6a08", "paula": "978421fe4190004b8756ac7bff5b467c6457e3bfe7b671491113d4bbee05b9a7", "luiz": "7e83a5bc3e4a65c1b287dfe60056ca1e232bdfa70ea28599865c00aacaede200", "guilherme": "b89e65f12d098e88aa0721f6555855a084039075d38dece3f750fb842554d611"}};
-  function norm(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase(); }
-  async function hash(t){ var b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.prototype.map.call(new Uint8Array(b), function(x){ return ('0'+x.toString(16)).slice(-2); }).join(''); }
-  function entrar(u){ document.getElementById('login').hidden=true; document.getElementById('app').hidden=false; document.getElementById('userbar').hidden=false;
-    document.getElementById('lgWho').textContent='Conectado como '+u.charAt(0).toUpperCase()+u.slice(1); }
-  try{ var salvo=localStorage.getItem('audinj-user'); if (salvo && ACESSOS.users[salvo]) entrar(salvo); }catch(e){}
-  document.getElementById('loginForm').addEventListener('submit', async function(ev){
-    ev.preventDefault();
-    var u=norm(document.getElementById('lgUser').value), p=document.getElementById('lgPass').value, err=document.getElementById('lgErr');
-    err.textContent='';
-    if (!ACESSOS.users[u]){ err.textContent='Usuário não encontrado.'; return; }
-    var h=await hash(ACESSOS.salt+':'+u+':'+p);
-    if (h!==ACESSOS.users[u]){ err.textContent='Senha incorreta.'; return; }
-    try{ localStorage.setItem('audinj-user', u); }catch(e){}
-    entrar(u);
+'use strict';
+var $ = function(id){ return document.getElementById(id); };
+var A = window.AudCore, App = window.AudApp;
+var sessao=null, acessos=null, registro=null, arvore=null, vinculo=null;
+var filtros={ tipo:'todos', emp:'todas', status:'todos', busca:'' };
+try{ var f=JSON.parse(localStorage.getItem('aud.filtros')||'null'); if (f) filtros=Object.assign(filtros,f); }catch(e){}
+try{ sessao=JSON.parse(sessionStorage.getItem('aud.sessao')||'null'); }catch(e){}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function toast(t){ var e=$('toast'); e.textContent=t; e.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(function(){ e.hidden=true; },5000); }
+var TIPOS=[['op1','Cancelamento OP 1'],['verificacao','Verificação'],['inadimplentes','Inadimplentes']];
+function tipoNome(t){ var x=TIPOS.filter(function(p){ return p[0]===t; })[0]; return x?x[1]:t; }
+
+/* ---------- login ---------- */
+async function iniciar(){
+  try{ var r=await fetch('acessos.json?t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0; acessos=await r.json(); }
+  catch(e){ $('semConfig').hidden=false; $('loginForm').hidden=true; return; }
+  var sel=$('lgUser'); sel.innerHTML='';
+  Object.keys(acessos.usuarios||{}).forEach(function(n){ var o=document.createElement('option'); o.textContent=n; sel.appendChild(o); });
+  try{ var u=localStorage.getItem('aud.usuario'); if (u && acessos.usuarios[u]) sel.value=u; }catch(e){}
+  if (sessao && acessos.usuarios[sessao.nome]) abrir();
+}
+$('loginForm').addEventListener('submit', async function(ev){
+  ev.preventDefault();
+  var nome=$('lgUser').value, senha=$('lgPass').value, b=$('lgBtn'); $('lgErr').textContent='';
+  b.disabled=true; b.textContent='Entrando…';
+  try{
+    var tk=JSON.parse(await decifrar(acessos.usuarios[nome], senha)).token;
+    sessao={ nome:nome, token:tk };
+    try{ sessionStorage.setItem('aud.sessao', JSON.stringify(sessao)); localStorage.setItem('aud.usuario', nome); }catch(e){}
+    abrir();
+  }catch(e){ $('lgErr').textContent='Senha incorreta.'; }
+  finally{ b.disabled=false; b.textContent='Entrar'; }
+});
+$('lgOut').addEventListener('click', function(){ try{ sessionStorage.removeItem('aud.sessao'); }catch(e){} location.reload(); });
+function abrir(){
+  $('login').hidden=true; $('app').hidden=false; $('userbar').hidden=false;
+  $('lgWho').textContent='Conectado como '+sessao.nome;
+  irPara(location.hash.replace('#','')||'lista');
+  carregarLista();
+}
+
+/* ---------- abas ---------- */
+function irPara(aba){
+  if (['lista','auditoria','arquivo'].indexOf(aba)<0) aba='lista';
+  ['lista','auditoria','arquivo'].forEach(function(a){ $('tab-'+a).hidden = a!==aba; var b=$('nav-'+a); if (b) b.setAttribute('aria-current', a===aba?'page':'false'); });
+  if (location.hash!=='#'+aba) history.replaceState(null,'','#'+aba);
+  if (aba==='arquivo') carregarArvore();
+}
+document.querySelectorAll('[data-aba]').forEach(function(b){ b.addEventListener('click', function(){ irPara(b.dataset.aba); }); });
+window.addEventListener('hashchange', function(){ if (sessao) irPara(location.hash.replace('#','')); });
+
+/* ---------- lista de auditorias ---------- */
+async function carregarLista(silencioso){
+  if (!silencioso) $('listaInfo').textContent='Carregando a lista…';
+  try{
+    var r=await gh(sessao.token,'GET',conteudo(REPO_DADOS,'registro.json'),null,'application/vnd.github.raw');
+    registro=await r.json(); renderLista();
+  }catch(e){
+    $('listaInfo').textContent = e.status===401 ? 'A chave de acesso expirou ou foi trocada. Peça para a Daniela refazer os acessos.' :
+      e.status===404 ? 'Não achei a lista no repositório auditoria-dados.' : 'Não consegui carregar a lista agora ('+e.message+').';
+  }
+  clearTimeout(carregarLista.t); carregarLista.t=setTimeout(function(){ if (!document.hidden && sessao) carregarLista(true); }, 120000);
+}
+function seg(id, valores, atual, onChange){
+  var box=$(id); box.innerHTML='';
+  valores.forEach(function(v){ var b=document.createElement('button'); b.type='button'; b.textContent=v[1]; b.setAttribute('aria-pressed', v[0]===atual?'true':'false');
+    b.addEventListener('click', function(){ onChange(v[0]); }); box.appendChild(b); });
+}
+function salvarFiltros(){ try{ localStorage.setItem('aud.filtros', JSON.stringify(filtros)); }catch(e){} }
+function renderLista(){
+  if (!registro) return;
+  var itens=registro.itens||[];
+  var cont=function(t){ return itens.filter(function(x){ return t==='todos'||x.tipo===t; }).length; };
+  seg('fTipo', [['todos','Todas ('+itens.length+')']].concat(TIPOS.map(function(t){ return [t[0], t[1]+' ('+cont(t[0])+')']; })), filtros.tipo, function(v){ filtros.tipo=v; salvarFiltros(); renderLista(); });
+  seg('fEmp', [['todas','Todas'],['WEGEN','WeGen'],['SMARTBEN','SmartBen']], filtros.emp, function(v){ filtros.emp=v; salvarFiltros(); renderLista(); });
+  seg('fStatus', [['todos','Todas'],['a_fazer','A fazer'],['feita','Com planilha']], filtros.status, function(v){ filtros.status=v; salvarFiltros(); renderLista(); });
+  var q=A.digits(filtros.busca)||filtros.busca.toLowerCase().trim();
+  var vis=itens.filter(function(x){
+    if (filtros.tipo!=='todos' && x.tipo!==filtros.tipo) return false;
+    if (filtros.emp!=='todas' && x.empresa!==filtros.emp) return false;
+    if (filtros.status==='a_fazer' && x.status==='feita') return false;
+    if (filtros.status==='feita' && x.status!=='feita') return false;
+    if (q && (x.nome.toLowerCase().indexOf(q)<0 && String(x.instalacao).indexOf(q)<0)) return false;
+    return true;
   });
-  document.getElementById('lgOut').addEventListener('click', function(){ try{ localStorage.removeItem('audinj-user'); }catch(e){} location.reload(); });
+  var box=$('lista'); box.innerHTML='';
+  var feitas=itens.filter(function(x){ return x.status==='feita'; }).length;
+  $('listaInfo').textContent = itens.length+' auditoria(s) na planilha · '+feitas+' com planilha salva · lista atualizada em '+(registro.atualizado_em? new Date(registro.atualizado_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}) : '—')+'.';
+  if ((registro.erros||[]).length){ var w=document.createElement('div'); w.className='note warn'; w.innerHTML='<b>Planilha</b>'+esc(registro.erros.join(' · ')); box.appendChild(w); }
+  if (!vis.length){ var e=document.createElement('p'); e.className='small'; e.textContent='Nenhuma auditoria com esses filtros.'; box.appendChild(e); return; }
+  TIPOS.forEach(function(t){ ['WEGEN','SMARTBEN'].forEach(function(emp){
+    var grupo=vis.filter(function(x){ return x.tipo===t[0] && x.empresa===emp; }).sort(function(a,b){ return a.numero-b.numero; });
+    if (!grupo.length) return;
+    var h=document.createElement('h3'); h.className='grp'; h.textContent=t[1]+' · '+(emp==='WEGEN'?'WeGen':'SmartBen'); box.appendChild(h);
+    var ul=document.createElement('div'); ul.className='aud-list';
+    grupo.forEach(function(x){
+      var d=document.createElement('div'); d.className='aud'+(x.status==='feita'?' feita':'');
+      var chip = x.status==='feita' ? '<span class="chip ok">planilha salva</span>' : x.status==='fora_planilha' ? '<span class="chip off">fora da planilha</span>' : '<span class="chip run">a fazer</span>';
+      d.innerHTML='<div class="aud-main"><span class="aud-n">'+x.numero+'.</span><div class="aud-t"><b>'+esc(x.nome)+'</b>'+chip+
+        '<span class="small">'+(x.instalacao?'Instalação <span class="mono">'+esc(x.instalacao)+'</span> · ':'')+(x.data_solicitacao?'solicitado em '+esc(x.data_solicitacao):'')+(x.data_final?' · data final '+esc(x.data_final):'')+(x.colaborador?' · '+esc(x.colaborador):'')+'</span>'+
+        (x.motivo?'<span class="small motivo">'+esc(x.motivo)+'</span>':'')+'</div></div>';
+      var acts=document.createElement('div'); acts.className='aud-acts';
+      if (x.instalacao){ var b1=document.createElement('button'); b1.type='button'; b1.className='btn primary-sm'; b1.textContent= x.status==='feita' ? 'Refazer auditoria' : 'Fazer auditoria';
+        b1.addEventListener('click', function(){ fazer(x, b1); }); acts.appendChild(b1); }
+      var b2=document.createElement('button'); b2.type='button'; b2.className='btn ghost'; b2.textContent='Arquivos ('+(x.arquivos||[]).length+')';
+      b2.addEventListener('click', function(){ abrirPasta(x.pasta); }); acts.appendChild(b2);
+      d.appendChild(acts); ul.appendChild(d);
+    });
+    box.appendChild(ul);
+  }); });
+}
+$('fBusca').value=filtros.busca||'';
+$('fBusca').addEventListener('input', function(){ filtros.busca=this.value; renderLista(); });
+$('listaAtualizar').addEventListener('click', function(){ carregarLista(); });
+
+async function baixarArquivo(caminho){
+  var r=await gh(sessao.token,'GET',conteudo(REPO_DADOS,caminho),null,'application/vnd.github.raw');
+  return await r.blob();
+}
+async function fazer(x, botao){
+  if (App.rodando()){ toast('Espere a auditoria em andamento terminar.'); return; }
+  var arq=null, xl=(x.arquivos||[]).filter(function(a){ return /\.xlsx$/i.test(a.nome); });
+  if (xl.length){
+    botao.disabled=true; botao.textContent='Abrindo a planilha salva…';
+    try{ var bl=await baixarArquivo(x.pasta+'/'+xl[0].nome); arq=new File([bl], xl[0].nome, { type:bl.type }); }
+    catch(e){ toast('Não consegui abrir a planilha salva; a auditoria vai partir da modelo.'); }
+    botao.disabled=false; botao.textContent='Refazer auditoria';
+  }
+  vinculo=x;
+  App.preencher({ instalacao:x.instalacao, nome:x.nome, numero:x.numero, empresa:x.empresa, arquivo:arq });
+  mostrarVinculo();
+  irPara('auditoria'); window.scrollTo(0,0);
+}
+function mostrarVinculo(){
+  var v=$('vinculo');
+  if (!vinculo){ v.hidden=true; $('salvarRow').hidden=true; return; }
+  v.hidden=false;
+  v.innerHTML='<b>Auditoria da lista</b>'+esc(vinculo.numero+'. AUD - '+vinculo.nome)+' · '+esc(tipoNome(vinculo.tipo))+' · '+(vinculo.empresa==='WEGEN'?'WeGen':'SmartBen')+
+    '. Ao terminar, salve a planilha na pasta do cliente. <button type="button" class="linkbtn" id="desvincular">Desvincular</button>';
+  $('desvincular').addEventListener('click', function(){ vinculo=null; mostrarVinculo(); });
+}
+document.addEventListener('aud:pronto', function(){ $('salvarRow').hidden = !vinculo; $('salvarMsg').textContent = vinculo ? 'Vai para: '+vinculo.pasta.replace(/^AUDITORIAS\//,'').split('/').join(' › ') : ''; });
+$('salvar').addEventListener('click', async function(){
+  var out=App.out(); if (!out || !vinculo) return;
+  var b=this, caminho=vinculo.pasta+'/'+App.fileName();
+  b.disabled=true; b.textContent='Salvando…';
+  try{
+    var sha=null; try{ sha=(await (await gh(sessao.token,'GET',conteudo(REPO_DADOS,caminho))).json()).sha; }catch(e){ if (e.status!==404) throw e; }
+    await gh(sessao.token,'PUT',conteudo(REPO_DADOS,caminho),{ message:'Auditoria salva por '+sessao.nome+': '+App.fileName(), content:bytesParaBase64(out.bytes), ...(sha?{sha:sha}:{}) });
+    var nome=App.fileName(), ar=vinculo.arquivos||(vinculo.arquivos=[]);
+    if (!ar.some(function(a){ return a.nome===nome; })) ar.push({ nome:nome, tamanho:out.bytes.length });
+    vinculo.status='feita'; renderLista(); arvore=null;
+    $('salvarMsg').textContent='Salvo em '+vinculo.pasta.replace(/^AUDITORIAS\//,'').split('/').join(' › ')+' ('+(sha?'substituiu a anterior':'novo')+').';
+    toast('Planilha salva na pasta do cliente.');
+  }catch(e){ $('salvarMsg').textContent = e.status===401 ? 'A chave de acesso expirou.' : e.status===409 ? 'O arquivo mudou enquanto salvava; clique de novo.' : 'Não consegui salvar: '+e.message; }
+  finally{ b.disabled=false; b.textContent='Salvar na pasta do cliente'; }
+});
+
+/* ---------- arquivo (pastas) ---------- */
+var abrirAlvo=null;
+function abrirPasta(p){ abrirAlvo=p; irPara('arquivo'); }
+async function carregarArvore(){
+  var box=$('pastas');
+  if (!arvore){ box.innerHTML='<p class="small">Carregando as pastas…</p>';
+    try{ var t=await (await gh(sessao.token,'GET','/repos/'+DONO+'/'+REPO_DADOS+'/git/trees/main?recursive=1')).json();
+      arvore=t.tree.filter(function(x){ return x.type==='blob' && x.path.indexOf('AUDITORIAS/')===0 && !/\/\.gitkeep$/.test(x.path); });
+    }catch(e){ box.innerHTML='<p class="small">Não consegui abrir as pastas ('+esc(e.message)+').</p>'; return; } }
+  renderArvore();
+}
+function renderArvore(){
+  var box=$('pastas'); box.innerHTML='';
+  var porPasta={};
+  (registro&&registro.itens||[]).forEach(function(x){ porPasta[x.pasta]=porPasta[x.pasta]||{ item:x, arqs:[] }; });
+  arvore.forEach(function(f){ var p=f.path.split('/').slice(0,-1).join('/'); (porPasta[p]=porPasta[p]||{ item:null, arqs:[] }).arqs.push(f); });
+  var q=($('aBusca').value||'').toLowerCase().trim();
+  var tipos={};
+  Object.keys(porPasta).forEach(function(p){ var parts=p.split('/'); if (parts.length<4) return; var k=parts[1], e=parts[2];
+    ((tipos[k]=tipos[k]||{})[e]=tipos[k][e]||[]).push({ pasta:p, titulo:parts.slice(3).join('/'), dados:porPasta[p] }); });
+  Object.keys(tipos).sort().forEach(function(tk){
+    var h=document.createElement('h3'); h.className='grp'; h.textContent=tk; box.appendChild(h);
+    Object.keys(tipos[tk]).sort().forEach(function(emp){
+      var sub=document.createElement('div'); sub.className='emp'; sub.innerHTML='<span class="lbl">'+esc(emp)+'</span>'; box.appendChild(sub);
+      tipos[tk][emp].sort(function(a,b){ return (parseInt(a.titulo)||0)-(parseInt(b.titulo)||0); }).forEach(function(p){
+        if (q && p.titulo.toLowerCase().indexOf(q)<0) return;
+        var d=document.createElement('details'); d.className='pasta'; if (abrirAlvo===p.pasta) d.open=true;
+        d.innerHTML='<summary><span class="t">📁 '+esc(p.titulo)+'</span><span class="c">'+p.dados.arqs.length+' arquivo(s)</span></summary>';
+        var ul=document.createElement('ul'); ul.className='files';
+        p.dados.arqs.forEach(function(f){ var nome=f.path.split('/').pop(); var li=document.createElement('li');
+          li.innerHTML='<span class="fn">'+esc(nome)+'</span><span class="small">'+Math.max(1,Math.round((f.size||0)/1024))+' KB</span>';
+          var b=document.createElement('button'); b.type='button'; b.className='btn ghost'; b.textContent='Baixar';
+          b.addEventListener('click', async function(){ b.disabled=true; try{ var bl=await baixarArquivo(f.path); var u=URL.createObjectURL(bl), a=document.createElement('a'); a.href=u; a.download=nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(u); },5000); }catch(e){ toast('Não consegui baixar: '+e.message); } b.disabled=false; });
+          li.appendChild(b); ul.appendChild(li); });
+        if (!p.dados.arqs.length){ var li0=document.createElement('li'); li0.className='small'; li0.textContent='Pasta vazia. A auditoria ainda não foi salva.'; ul.appendChild(li0); }
+        var up=document.createElement('li'); var inp=document.createElement('input'); inp.type='file'; inp.multiple=true; inp.hidden=true;
+        var bu=document.createElement('button'); bu.type='button'; bu.className='btn ghost'; bu.textContent='Enviar arquivo para esta pasta';
+        bu.addEventListener('click', function(){ inp.click(); });
+        inp.addEventListener('change', async function(){ bu.disabled=true; var ok=0;
+          for (var i=0;i<inp.files.length;i++){ var fl=inp.files[i], cam=p.pasta+'/'+fl.name.replace(/[\\\/:*?"<>|]+/g,' ');
+            try{ var sha=null; try{ sha=(await (await gh(sessao.token,'GET',conteudo(REPO_DADOS,cam))).json()).sha; }catch(e){ if (e.status!==404) throw e; }
+              await gh(sessao.token,'PUT',conteudo(REPO_DADOS,cam),{ message:'Arquivo enviado por '+sessao.nome+': '+fl.name, content:bytesParaBase64(new Uint8Array(await fl.arrayBuffer())), ...(sha?{sha:sha}:{}) }); ok++;
+            }catch(e){ toast('Não consegui enviar '+fl.name+': '+e.message); } }
+          bu.disabled=false; if (ok){ toast(ok+' arquivo(s) enviado(s).'); abrirAlvo=p.pasta; arvore=null; carregarArvore(); setTimeout(function(){ carregarLista(true); }, 60000); } });
+        up.append(bu, inp); ul.appendChild(up);
+        d.appendChild(ul); box.appendChild(d);
+        if (abrirAlvo===p.pasta) setTimeout(function(){ d.scrollIntoView({ block:'center' }); }, 50);
+      });
+    });
+  });
+  abrirAlvo=null;
+}
+$('aBusca').addEventListener('input', function(){ if (arvore) renderArvore(); });
+$('arquivoAtualizar').addEventListener('click', function(){ arvore=null; carregarArvore(); });
+
+iniciar();
 })();
 </script>
 

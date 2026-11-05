@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Configurar acessos · Auditoria de Injeção</title><meta name="robots" content="noindex">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#f3f6f5;--surface:#fff;--ink:#14211f;--muted:#5a6b68;--line:#d6dfdc;--grid:#1f5c55;--grid-soft:#e1eeeb;--warn:#a4481f;--warn-soft:#fbe9e0;--ok:#2b7a3d;--ok-soft:#e3f2e6}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1716;--surface:#16211f;--ink:#e4ecea;--muted:#94a6a2;--line:#2a3a37;--grid:#5fbcae;--grid-soft:#1a2f2c;--warn:#e88a63;--warn-soft:#2e1c14;--ok:#7fd08f;--ok-soft:#173022;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Public Sans",system-ui,sans-serif;padding:32px max(16px,env(safe-area-inset-left,0px)) 64px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2{font-family:Archivo,sans-serif;margin:0}h1{font-size:30px}h2{font-size:18px}
+.top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.sub,.muted{color:var(--muted)}ol{margin:6px 0 0;padding-left:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.field{display:flex;flex-direction:column;gap:6px}label{font-size:13px;font-weight:600;color:var(--muted)}
+input{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%}
+.user{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}@media(max-width:520px){.user{grid-template-columns:1fr}}
+.btn{font:inherit;font-weight:600;border-radius:8px;padding:10px 18px;border:1px solid var(--grid);background:var(--grid);color:#fff;cursor:pointer;text-decoration:none;display:inline-block}
+.btn.ghost{background:transparent;color:var(--grid)}.btn:disabled{opacity:.5}
+.note{background:var(--warn-soft);border-radius:8px;padding:10px 14px}.ok{background:var(--ok-soft);border-radius:8px;padding:10px 14px}
+code{background:var(--grid-soft);padding:1px 6px;border-radius:4px}
+</style></head>
+<body>
+<div class="wrap">
+  <header class="top"><div><h1>Configurar acessos</h1><p class="sub">Feito uma vez, pela dona do site. Cria os logins de quem usa a Auditoria de Injeção.</p></div>
+    <a class="btn ghost" href="./">Voltar ao site</a></header>
+  <section class="card">
+    <div><h2>1. Chave do GitHub</h2>
+      <p class="muted">O site usa uma chave (token) do GitHub para ler a lista de auditorias e guardar as planilhas no repositório privado. Para criar:</p>
+      <ol class="muted">
+        <li>No GitHub: <b>Settings › Developer settings › Personal access tokens › Fine-grained tokens › Generate new token</b> (em português: Configurações › Configurações de desenvolvedor › Tokens de acesso pessoal › Tokens refinados › Gerar novo token).</li>
+        <li>Em <b>Repository access</b>, escolha <b>Only select repositories</b> e marque <code>auditoria-injecao</code> e <code>auditoria-dados</code>.</li>
+        <li>Em <b>Permissions › Repository permissions</b>: <b>Contents: Read and write</b> e <b>Actions: Read and write</b>.</li>
+        <li>Gere e cole aqui. A chave não aparece para ninguém: ela fica guardada trancada pela senha de cada pessoa.</li>
+      </ol></div>
+    <div class="field"><label for="token">Chave do GitHub</label><input id="token" type="password" autocomplete="off" placeholder="github_pat_…"></div>
+    <div><h2>2. Pessoas</h2><p class="muted">Cada pessoa entra com o nome e a própria senha.</p></div>
+    <div id="users"></div>
+    <div><button class="btn ghost" type="button" id="add">Adicionar pessoa</button></div>
+    <div id="msg" hidden></div>
+    <div><button class="btn" type="button" id="salvar">Salvar acessos</button></div>
+  </section>
+</div>
+<script src="comum.js"></script>
+<script>
+const $ = s => document.querySelector(s); let n = 0;
+function linha(nome = "", senha = "") {
+  const i = n++, d = document.createElement("div"); d.className = "user";
+  d.innerHTML = `<div class="field"><label for="u${i}">Nome</label><input id="u${i}" class="nome" type="text"></div>
+    <div class="field"><label for="s${i}">Senha</label><input id="s${i}" class="senha" type="password" autocomplete="new-password"></div>
+    <button class="btn ghost" type="button">Remover</button>`;
+  d.querySelector(".nome").value = nome; d.querySelector(".senha").value = senha;
+  d.querySelector("button").onclick = () => d.remove(); $("#users").appendChild(d);
+}
+["Daniela", "Laura", "Paula", "Luiz", "Guilherme"].forEach(x => linha(x));
+$("#add").onclick = () => linha();
+function msg(html, erro) { const m = $("#msg"); m.className = erro ? "note" : "ok"; m.innerHTML = html; m.hidden = false; }
+$("#salvar").onclick = async () => {
+  const token = $("#token").value.trim();
+  const pessoas = [...document.querySelectorAll(".user")].map(d => ({ nome: d.querySelector(".nome").value.trim(), senha: d.querySelector(".senha").value })).filter(p => p.nome);
+  if (!token) return msg("<b>Falta a chave.</b> Cole a chave do GitHub no passo 1.", true);
+  if (!pessoas.length || pessoas.some(p => !p.senha)) return msg("<b>Falta senha.</b> Cada pessoa precisa de uma senha.", true);
+  const b = $("#salvar"); b.disabled = true; msg("Testando a chave…");
+  try { await gh(token, "GET", conteudo(REPO_DADOS, "registro.json")); }
+  catch (e) { b.disabled = false; return msg(e.status === 401 ? "<b>Chave inválida.</b> Confira se copiou a chave inteira." : e.status === 404 ? "<b>A chave não alcança o repositório de dados.</b> Marque <code>auditoria-dados</code> em Repository access." : "<b>Não consegui testar a chave:</b> " + e.message, true); }
+  msg("Trancando a chave com a senha de cada pessoa… (leva alguns segundos)");
+  try {
+    const usuarios = {};
+    for (const p of pessoas) usuarios[p.nome] = await cifrar(JSON.stringify({ token }), p.senha);
+    const arquivo = JSON.stringify({ versao: 1, atualizado_em: new Date().toISOString(), usuarios }, null, 1);
+    let sha; try { sha = (await (await gh(token, "GET", conteudo(REPO_SITE, "acessos.json"))).json()).sha; } catch (_) {}
+    await gh(token, "PUT", conteudo(REPO_SITE, "acessos.json"), { message: "Atualiza acessos da Auditoria de Injeção", content: bytesParaBase64(new TextEncoder().encode(arquivo)), ...(sha ? { sha } : {}) });
+    $("#token").value = ""; document.querySelectorAll(".senha").forEach(i => i.value = "");
+    msg(`Acessos salvos para <b>${pessoas.map(p => p.nome).join(", ")}</b>. Em 1 ou 2 minutos o site já aceita os logins. <a href="./">Ir para o site</a>.`);
+  } catch (e) {
+    msg(e.status === 404 || e.status === 403 ? "<b>A chave não pode gravar no site.</b> Marque também <code>auditoria-injecao</code> em Repository access, com Contents: Read and write." : "<b>Não consegui salvar:</b> " + e.message, true);
+  } finally { b.disabled = false; }
+};
+</script>
+</body></html>

@@ -2,7 +2,9 @@
 
 Plataforma da auditoria de injeção de energia (WeGen · SmartBen).
 
-- Abre em: https://danielamotaxp-code.github.io/auditoria-injecao/
+- Endereço: https://danielamotaxp-code.github.io/auditoria-injecao/
 - Use no **Chrome ou Edge**, com a VPN ligada, e conecte a pasta do Z: (a que tem 2024, 2025, 2026 e Faturamento).
-- Tudo roda no navegador de quem usa: os relatórios e as planilhas não saem do computador. O índice dos relatórios fica guardado no navegador de cada pessoa.
-- Acessos: Daniela, Laura, Paula, Luiz e Guilherme.
+- **Lista de auditorias**: vem das abas AUD - CANCELAMENTO OP 1, AUD - VERIFICAÇÃO e AUD - INADIMPLENTES da planilha CANCELAMENTOS E AUDITORIAS.
+- **Arquivo**: as planilhas ficam guardadas no repositório privado `auditoria-dados`, em pastas por tipo de auditoria e empresa.
+- **Acessos**: configurados em `configurar.html` (a chave do GitHub fica trancada pela senha de cada pessoa, como na Central de Distratos).
+- Os relatórios do Z: são lidos no navegador de quem usa e não saem do computador.
