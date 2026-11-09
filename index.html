@@ -786,7 +786,7 @@ ul.files .fn{flex:1 1 220px;overflow-wrap:anywhere;font-size:14px}
     cols.forEach(function (c) { for (var k4 in c.data) allKeys[k4] = 1; });
     ex2.forEach(function (k5) { if (k5 != null) allKeys[k5] = 1; });
     var cc = opts.consComp || {};
-    Object.keys(cc).forEach(function (k6) { if (cc[k6] && (cc[k6][0] || cc[k6][1])) allKeys[k6] = 1; });
+    Object.keys(cc).forEach(function (k6) { if (cc[k6]) allKeys[k6] = 1; });
     var ks = Object.keys(allKeys).map(Number);
     if (!cols.length) throw new Error('Nenhuma usina com dados para esta instalação.');
     var kMin = Math.min.apply(null, ks), kMax = Math.max.apply(null, ks);
@@ -1459,7 +1459,7 @@ function renderTable(cols, rows){
   var tr=document.createElement('tr'); var h=document.createElement('th'); h.textContent='MÊS'; tr.appendChild(h);
   cols.forEach(function(c){ var x=document.createElement('th'); x.textContent=c; tr.appendChild(x); });
   var s=document.createElement('th'); s.className='sum'; s.textContent='SOMA'; tr.appendChild(s);
-  var temCC=rows.some(function(r){ return 'cons' in r; });
+  var temCC=false;
   if (temCC) ['CONSUMO'].forEach(function(n){ var x=document.createElement('th'); x.className='cc'; x.textContent=n; tr.appendChild(x); });
   th.appendChild(tr);
   rows.forEach(function(r){ var t=document.createElement('tr'); if(!r.sum) t.className='nodata';
@@ -1541,6 +1541,7 @@ async function run(){
       if (!c){ consComp[k]=[u[k][0],null]; continue; }
       if (Math.abs(c[0]-u[k][0])>0.01) ccDiv.push(A.label(+k));
       c[0]=Math.max(c[0],u[k][0]); } });
+    Object.keys(consComp).forEach(function(k){ if (consComp[k][0]) consComp[k]=[null,null]; else delete consComp[k]; }); ccDiv=[];
     summary([['Relatórios',String(tot.files)],['Do índice',String(tot.idx)],['Abertos agora',tot.read+' ('+Math.round(tot.bytes/1048576)+' MB)'],['Com a instalação',String(reports.length)],['Usinas com dados',String(usinas.length)],['Tempo',elapsed(t0)]]);
     renderCards(usinas.map(function(u){ var ks=Object.keys(u.data).map(Number).sort(function(a,b){return a-b;});
       var det=['Relatórios com a instalação: '+u.reports]; var rv=Object.keys(u.revised);
@@ -1563,8 +1564,7 @@ async function run(){
     var vazios=out.preview.filter(function(r){ return !r.sum; }).length;
     $('resSub').textContent = out.preview.length+' meses ('+out.preview[0].label+' a '+out.preview[out.preview.length-1].label+'), '+out.columns.length+' usina(s), empresa '+state.emp+'.'+(vazios?' '+vazios+' mês(es) sem injeção ficam com 0.':'');
     out.warnings.forEach(function(w){ note('warn','Atenção', w); });
-    var semCC=out.preview.filter(function(r){ return r.cons==null; }).map(function(r){ return r.label; });
-    note('info','Consumo e Compensação', 'Consumo preenchido a partir dos relatórios na aba "'+out.saldoSheet+'" ('+out.ccFilled+' célula(s)).'+(semCC.length?' Sem consumo no relatório (ficaram como estavam): '+semCC.slice(0,8).join(', ')+(semCC.length>8?'…':'')+'.':'')+' A COMPENSAÇÃO fica para você preencher; o SALDO já tem as fórmulas e recalcula sozinho.');
+    note('info','Consumo e Compensação', 'A planilha traz só a injeção. CONSUMO e COMPENSAÇÃO da aba "'+out.saldoSheet+'" ficam para você preencher (o que já estiver preenchido é mantido); o SALDO já tem as fórmulas e recalcula sozinho.');
     $('dlRow').hidden=false; $('dlMsg').textContent=fileName();
     prog(100, 'Concluído em '+elapsed(t0)+'.'); setStatus('Pronto. Confira a tabela e baixe a planilha.'); document.dispatchEvent(new CustomEvent('aud:pronto'));
   }catch(e){
