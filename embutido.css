@@ -1,0 +1,6 @@
+/* Dentro do portal único: sem cabeçalho próprio e nas cores da WeGen (verde) e SmartBen */
+html.plat-embutido #app > header .eyebrow, html.plat-embutido #app > header h1, html.plat-embutido .userbar .who { display: none; }
+html.plat-embutido:root { --grid: #1e874b; --grid-soft: #dff2e6; }
+html.plat-embutido[data-theme="dark"]:root, html.plat-embutido[data-tema="escuro"]:root { --grid: #6fd39a; --grid-soft: #173022; }
+@media (prefers-color-scheme: dark) { html.plat-embutido:root:not([data-theme="light"]) { --grid: #6fd39a; --grid-soft: #173022; } }
+html.plat-embutido a[href="configurar.html"], html.plat-embutido #semConfig { display: none !important; }
