@@ -1227,7 +1227,7 @@ var SOURCES = [
   { id:'2026', title:'2026', match:function(n){ return n.trim()==='2026'; } }
 ];
 var state = { emp:'WeGen', xlsx:null, out:null, running:false, stop:false, root:null, rootIsHandle:false, src:{} };
-var FS_OK = ('showDirectoryPicker' in window) && (function(){ try{ return window.self===window.top; }catch(e){ return false; } })();
+var FS_OK = ('showDirectoryPicker' in window); // funciona também dentro do portal (mesmo endereço)
 
 /* ---------- banco local (IndexedDB): pasta conectada + índice dos relatórios ---------- */
 var dbP=null;
