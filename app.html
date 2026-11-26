@@ -1100,7 +1100,8 @@ ul.files .fn{flex:1 1 220px;overflow-wrap:anywhere;font-size:14px}
       var id = r.usina.code || r.usina.name, u = by[id];
       if (!u) u = by[id] = { code: r.usina.code, name: r.usina.name, data: {}, reports: 0, revised: {}, lastSort: 0, paths: [] };
       u.reports++; u.paths.push(r.path);
-      if (r.sort >= u.lastSort) { u.name = r.usina.name; u.lastSort = r.sort; }
+      if (r.sort >= u.lastSort) { if (!r.usina.soCodigo || u.name === u.code) u.name = r.usina.name; u.lastSort = r.sort; }
+      if (r.usina.pastaErrada) (u.pastasErradas = u.pastasErradas || []).push(r.path);
       for (var k in r.data) {
         if (k in u.data && Math.abs(u.data[k] - r.data[k]) > 1e-9) u.revised[k] = (u.revised[k] || [u.data[k]]).concat([r.data[k]]);
         u.data[k] = r.data[k];
@@ -1414,7 +1415,7 @@ async function scanSource(src, node, prune, onProg){
 }
 
 // lê um relatório (ou usa o índice). Guarda TODAS as instalações do relatório no índice.
-var IDX_V='v2|';
+var IDX_V='v3|';
 async function loadReport(r, code){
   var cached=await dbGet('rep', IDX_V+r.key); // v2: zip com relatórios de várias usinas é lido só na parte da usina da pasta
   if (!r.node) return cached ? { rec:cached, from:'idx' } : null;
@@ -1431,7 +1432,10 @@ async function loadReport(r, code){
     else { parsedAll=false; if (t.text.indexOf(code)>=0){ var x=A.extractFromReport(t.text, code); extra = extra || x; } }
   });
   var usina = r.usina;
-  if (!usina && texts[0]){ var g=texts[0].name.match(/GD_(\d{9,11})/i); if (g) usina={ code:g[1], name:g[1] }; }
+  var gArq = (texts[0] && texts[0].name.match(/GD_(\d{9,11})/i)) || r.node.name.match(/GD_(\d{9,11})/i);
+  if (!usina && gArq) usina={ code:gArq[1], name:gArq[1] };
+  // arquivo de outra usina guardado nesta pasta (ex.: Relatório_GD da CNO dentro da pasta da CSE1): conta para a usina do arquivo
+  else if (usina && usina.code && gArq && gArq[1] !== usina.code) usina={ code:gArq[1], name:gArq[1], soCodigo:true, pastaErrada:usina.name };
   var rec={ size:file.size, mtime:file.lastModified, path:r.path.concat([r.node.name]).join(' \\ '), usina:usina, sort:A.reportSortKey(r.path, file.lastModified), emp:A.companyOf(r.path), data:data };
   if (parsedAll) await dbPut('rep', IDX_V+r.key, rec);
   return { rec:rec, from:'read', extra:extra, bytes:file.size };
@@ -1562,10 +1566,11 @@ async function run(){
       for (var a=0;a<usinas.length;a++) for (var b=a+1;b<usinas.length;b++){
         var ua=usinas[a], ub=usinas[b], ms=[];
         for (var k in ua.data) if (ua.data[k] && ub.data[k] && Math.abs(ua.data[k]-ub.data[k])<1e-6) ms.push(+k);
-        if (ms.length>=2) iguais.push(ua.name+' e '+ub.name+' ('+ms.sort(function(x,y){ return x-y; }).map(function(k){ return A.label(k); }).join(', ')+')');
+        if (ms.length>=2) iguais.push(ua.name+' e '+ub.name+' ('+ms.sort(function(x,y){ return x-y; }).map(function(k){ return A.label(k); }).join(', ')+'). Arquivos lidos — '+ua.name+': '+ua.paths.slice(-2).join(' | ')+' · '+ub.name+': '+ub.paths.slice(-2).join(' | '));
       }
       if (iguais.length) note('warn','Valores repetidos','Usinas diferentes com exatamente os mesmos valores nos mesmos meses: '+iguais.join('; ')+'. Provavelmente é o mesmo relatório nas pastas das duas usinas — confira nas pastas antes de usar a SOMA.');
     })();
+    usinas.forEach(function(u){ if (u.pastasErradas) note('warn','Arquivo na pasta errada','O relatório da usina '+u.code+' estava guardado na pasta de outra usina e foi contado só para a '+u.code+': '+u.pastasErradas.join(' | ')+'. Vale mover o arquivo para a pasta certa.'); });
     if (parado) note('warn','Parado','Você parou a leitura no meio. O que já foi lido ficou no índice; ao rodar de novo, continua bem mais rápido.');
     if (unread.length) note('warn','Verificar', unread.length+' relatório(s) mencionam a instalação, mas não consegui ler Período/Recebimento. Abra o card, copie o trecho e mande para o Claude.');
     if (errors.length) note('warn','Arquivos com erro', errors.length+' arquivo(s) não abriram: '+errors.slice(0,3).join('; ')+(errors.length>3?'…':''));
