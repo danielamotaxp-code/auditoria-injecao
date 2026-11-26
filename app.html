@@ -491,7 +491,7 @@ ul.files .fn{flex:1 1 220px;overflow-wrap:anywhere;font-size:14px}
 
   /* ---------------- pastas ---------------- */
   function parseDateFolder(name, ctxYear) {
-    var s = String(name).trim(), m;
+    var s = String(name).trim().replace(/\s*([\-._])\s*/g, '$1'), m; // "12 - 01" vale como "12-01"
     if ((m = s.match(/^(\d{1,2})[\-._](\d{1,2})[\-._](\d{4})$/))) return ok(+m[3], +m[2], +m[1]);
     if ((m = s.match(/^(\d{4})[\-._](\d{1,2})[\-._](\d{1,2})$/))) return ok(+m[1], +m[2], +m[3]);
     if ((m = s.match(/^(\d{1,2})[\-._](\d{1,2})[\-._](\d{2})$/))) return ok(2000 + +m[3], +m[2], +m[1]);
@@ -1112,7 +1112,7 @@ ul.files .fn{flex:1 1 220px;overflow-wrap:anywhere;font-size:14px}
 
   // data dentro do nome da pasta: "03-11", "2026-01-30", "30-08-2024", "Wegen 31-10", "xml 15-09-2022"
   function dateToken(name, ctx) {
-    var s = String(name).trim(), m, y, mo, d, tok;
+    var s = String(name).trim().replace(/\s*([\-._])\s*/g, '$1'), m, y, mo, d, tok; // "12 - 01" vale como "12-01"
     if (RX_USINA.test(s) || /^\s*\d{6,}\s*$/.test(s)) return null;
     if ((m = s.match(/(\d{4})[\-._](\d{1,2})[\-._](\d{1,2})(?!\d)/))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
     else if ((m = s.match(/(?<!\d)(\d{1,2})[\-._](\d{1,2})[\-._](\d{4})(?!\d)/))) { y = +m[3]; mo = +m[2]; d = +m[1]; }
@@ -1145,11 +1145,15 @@ ul.files .fn{flex:1 1 220px;overflow-wrap:anywhere;font-size:14px}
       var arr = groups[g].sort(function (a, b) { return b.s - a.s; });
       // "último dia do mês": quando a pasta acima indica o mês (ex.: "ABRIL 2024", "08-2024"), vale a última data DESSE mês
       // (ex.: em ABRIL 2024 abre 26-04-2024, e não 02-05-2024). Sem data desse mês, fica a mais recente.
+      var doMes = [];
       if (ctx.m) {
-        var doMes = arr.filter(function (x) { return Math.floor(x.s / 100) % 100 === ctx.m; });
+        doMes = arr.filter(function (x) { return Math.floor(x.s / 100) % 100 === ctx.m; });
         if (doMes.length) arr = doMes.concat(arr.filter(function (x) { return doMes.indexOf(x) < 0; }));
       }
-      if (prune) { keep.push(arr[0].n); arr.slice(1).forEach(function (x) { skipped.push(x.n); }); }
+      // Cada pasta de dia pode trazer só parte das usinas (ex.: 12/03 com 64 usinas e 31/03 com 38): entram todos os dias DESTE mês
+      // e, depois, para cada usina vale só a pasta mais recente em que ela aparece (ultimaPastaPorUsina).
+      if (prune && ctx.m && doMes.length) { doMes.forEach(function (x) { keep.push(x.n); }); arr.filter(function (x) { return doMes.indexOf(x) < 0; }).forEach(function (x) { skipped.push(x.n); }); }
+      else if (prune) { keep.push(arr[0].n); arr.slice(1).forEach(function (x) { skipped.push(x.n); }); }
       else arr.forEach(function (x) { keep.push(x.n); });
     });
     undated.forEach(function (n) {
@@ -1395,8 +1399,14 @@ async function scanSource(src, node, prune, onProg){
     });
     frontier=next;
   }
+  // a mesma usina em vários dias do mês: abre só a pasta do dia mais recente
+  var ultima={}, porUsina=queue.filter(function(q){ return q.node; });
+  // (no mesmo dia, ex.: pastas de horário 00-05 … 07-49, fica a última pelo nome)
+  porUsina.forEach(function(q){ var c=A.usinaCode(q.node.name)||q.node.name.trim(); q._s=A.reportSortKey(q.path.concat([q.node.name]), 0); q._c=c; q._p=q.path.join('/');
+    var u=ultima[c]; if (!u || q._s>u._s || (q._s===u._s && q._p>u._p)) ultima[c]=q; });
+  porUsina=porUsina.filter(function(q){ return ultima[q._c]===q; });
   // dentro de cada usina: desce nível a nível até achar o .zip ou o Relatório_GD (prefere o .zip, que é menor)
-  await pool(queue.filter(function(q){ return q.node; }), 10, async function(u){
+  await pool(porUsina, 10, async function(u){
     usinaN++; onProg('Procurando: '+dirs+' pasta(s), '+usinaN+' usina(s) · '+u.node.name);
     var p=u.path.concat([u.node.name]), level=[u.node], achou=[];
     for (var depth=0; depth<5 && level.length && !achou.length && !state.stop; depth++){
@@ -1415,7 +1425,7 @@ async function scanSource(src, node, prune, onProg){
 }
 
 // lê um relatório (ou usa o índice). Guarda TODAS as instalações do relatório no índice.
-var IDX_V='v3|';
+var IDX_V='v4|';
 async function loadReport(r, code){
   var cached=await dbGet('rep', IDX_V+r.key); // v2: zip com relatórios de várias usinas é lido só na parte da usina da pasta
   if (!r.node) return cached ? { rec:cached, from:'idx' } : null;
