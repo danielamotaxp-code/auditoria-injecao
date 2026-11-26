@@ -1367,7 +1367,7 @@ async function scanSource(src, node, prune, onProg){
       var here=it.path.concat([it.node.name]), key=here.join('/');
       // pasta de dia já indexada de um mês fechado: usa a lista guardada sem abrir nada
       if (it.dated && prune && mesFechado(here)){
-        var mc=await dbGet('month', key);
+        var mc=await dbGet('month', IDX_V+key);
         if (mc && mc.reps){ cachedMonths++; mc.reps.forEach(function(r){ reps.push({ key:r.key, node:null, path:r.path, usina:r.usina }); }); return; }
       }
       var kids; try { kids=await it.node.list(); } catch(e){ return; }
@@ -1414,12 +1414,16 @@ async function scanSource(src, node, prune, onProg){
 }
 
 // lê um relatório (ou usa o índice). Guarda TODAS as instalações do relatório no índice.
+var IDX_V='v2|';
 async function loadReport(r, code){
-  var cached=await dbGet('rep', r.key);
+  var cached=await dbGet('rep', IDX_V+r.key); // v2: zip com relatórios de várias usinas é lido só na parte da usina da pasta
   if (!r.node) return cached ? { rec:cached, from:'idx' } : null;
   var file=await r.node.file();
   if (cached && cached.size===file.size && cached.mtime===file.lastModified) return { rec:cached, from:'idx' };
   var texts = /\.zip$/i.test(r.node.name) ? await textsFromZip(await file.arrayBuffer(), 0) : [{ name:r.node.name, text:decodeBytes(new Uint8Array(await file.arrayBuffer())) }];
+  // o .zip da Cemig pode trazer os relatórios de várias usinas (GD_<instalação> de cada uma): lê só o da usina desta pasta
+  var codU = r.usina && r.usina.code;
+  if (codU && texts.length > 1){ var soDela = texts.filter(function(t){ return t.name.indexOf(codU) >= 0; }); if (soDela.length) texts = soDela; }
   var data={}, parsedAll=texts.length>0, extra=null;
   texts.forEach(function(t){
     var all=A.parseRelatorioAll(t.text);
@@ -1429,7 +1433,7 @@ async function loadReport(r, code){
   var usina = r.usina;
   if (!usina && texts[0]){ var g=texts[0].name.match(/GD_(\d{9,11})/i); if (g) usina={ code:g[1], name:g[1] }; }
   var rec={ size:file.size, mtime:file.lastModified, path:r.path.concat([r.node.name]).join(' \\ '), usina:usina, sort:A.reportSortKey(r.path, file.lastModified), emp:A.companyOf(r.path), data:data };
-  if (parsedAll) await dbPut('rep', r.key, rec);
+  if (parsedAll) await dbPut('rep', IDX_V+r.key, rec);
   return { rec:rec, from:'read', extra:extra, bytes:file.size };
 }
 
@@ -1525,7 +1529,7 @@ async function run(){
           prog(done/reps.length*100, sx.s.title+' · '+done+' de '+reps.length+' relatório(s) ('+fromIdx+' do índice, '+read+' abertos, '+Math.round(tot.bytes/1048576)+' MB) · falta ~'+(rest>90?Math.round(rest/60)+' min':rest+' s')); }
       });
       // guarda a lista de relatórios de cada dia de mês fechado (próximas auditorias pulam a listagem)
-      if (!state.stop) for (var dk in sc.days){ var arr=sc.days[dk]; if (arr.length && mesFechado(dk.split('/'))) await dbPut('month', dk, { at:Date.now(), reps:arr.map(function(r){ return { key:r.key, path:r.path, usina:r.usina }; }) }); }
+      if (!state.stop) for (var dk in sc.days){ var arr=sc.days[dk]; if (arr.length && mesFechado(dk.split('/'))) await dbPut('month', IDX_V+dk, { at:Date.now(), reps:arr.map(function(r){ return { key:r.key, path:r.path, usina:r.usina }; }) }); }
       tot.files+=reps.length; tot.read+=read; tot.idx+=fromIdx;
       setSrc(sid, [comInst?'ok':'off', comInst ? 'instalação em '+comInst+' relatório(s)' : 'sem a instalação'],
         reps.length+' relatório(s): '+fromIdx+' do índice, '+read+' abertos · '+(sc.cachedMonths?sc.cachedMonths+' dia(s) de mês fechado sem reabrir pastas · ':'')+(sc.skipEmp?sc.skipEmp+' pasta(s) da outra empresa puladas · ':'')+(sc.skipPer?sc.skipPer+' pasta(s) fora do período puladas · ':'')+sc.skipDates+' pasta(s) de outros dias puladas · '+elapsed(t1));
@@ -1552,6 +1556,16 @@ async function run(){
       return { kind:'ok', name:u.name, chip:ks.length+' mês(es) · '+A.label(ks[0])+' a '+A.label(ks[ks.length-1]), sub:rv.length?'valores revistos em '+rv.length+' mês(es)':'', details:det }; })
       .concat(unread.slice(0,6).map(function(x){ return { kind:'warn', name:x.where.split(' \\ ').slice(-3).join(' \\ '), chip:'código aparece, mas não li os dados', details:[x.where], snippet:x.snippet }; })));
     if (fx) note('info','Período', 'Só entraram períodos de '+(isFinite(fx.a)?A.label(fx.a):'início')+' até '+(isFinite(fx.b)?A.label(fx.b):'hoje')+'.'+(foraFaixa?' '+foraFaixa+' valor(es) de meses fora desse intervalo foram deixados de fora.':''));
+    // mesmo valor, nos mesmos meses, em duas usinas diferentes: quase sempre é o mesmo relatório lido duas vezes
+    (function(){
+      var iguais=[];
+      for (var a=0;a<usinas.length;a++) for (var b=a+1;b<usinas.length;b++){
+        var ua=usinas[a], ub=usinas[b], ms=[];
+        for (var k in ua.data) if (ua.data[k] && ub.data[k] && Math.abs(ua.data[k]-ub.data[k])<1e-6) ms.push(+k);
+        if (ms.length>=2) iguais.push(ua.name+' e '+ub.name+' ('+ms.sort(function(x,y){ return x-y; }).map(function(k){ return A.label(k); }).join(', ')+')');
+      }
+      if (iguais.length) note('warn','Valores repetidos','Usinas diferentes com exatamente os mesmos valores nos mesmos meses: '+iguais.join('; ')+'. Provavelmente é o mesmo relatório nas pastas das duas usinas — confira nas pastas antes de usar a SOMA.');
+    })();
     if (parado) note('warn','Parado','Você parou a leitura no meio. O que já foi lido ficou no índice; ao rodar de novo, continua bem mais rápido.');
     if (unread.length) note('warn','Verificar', unread.length+' relatório(s) mencionam a instalação, mas não consegui ler Período/Recebimento. Abra o card, copie o trecho e mande para o Claude.');
     if (errors.length) note('warn','Arquivos com erro', errors.length+' arquivo(s) não abriram: '+errors.slice(0,3).join('; ')+(errors.length>3?'…':''));
