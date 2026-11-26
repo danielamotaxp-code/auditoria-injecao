@@ -217,7 +217,7 @@ ul.files .fn{flex:1 1 220px;overflow-wrap:anywhere;font-size:14px}
 <section id="tab-arquivo" hidden>
   <div class="card">
     <div class="card-head"><div><h2>Arquivo</h2><p class="small">Pastas por tipo de auditoria e empresa, igual à pasta do computador.</p></div></div>
-    <div class="filtros"><input type="text" id="aBusca" placeholder="Buscar pasta" aria-label="Buscar pasta"><button type="button" class="btn ghost" id="arquivoAtualizar">Atualizar</button></div>
+    <div class="filtros"><input type="text" id="aBusca" placeholder="Buscar por nome ou instalação" aria-label="Buscar por nome ou instalação"><button type="button" class="btn ghost" id="arquivoAtualizar">Atualizar</button></div>
     <div id="pastas"></div>
   </div>
 </section>
@@ -1712,6 +1712,13 @@ function seg(id, valores, atual, onChange){
   valores.forEach(function(v){ var b=document.createElement('button'); b.type='button'; b.textContent=v[1]; b.setAttribute('aria-pressed', v[0]===atual?'true':'false');
     b.addEventListener('click', function(){ onChange(v[0]); }); box.appendChild(b); });
 }
+// busca por nome e/ou instalação: sem acento, cada palavra precisa aparecer (ex.: "luciano 3010")
+function semAcento(t){ return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+function bate(busca, nome, inst){
+  var partes=semAcento(busca).split(/\s+/).filter(Boolean); if (!partes.length) return true;
+  var n=semAcento(nome), i=String(inst||'');
+  return partes.every(function(p){ var d=p.replace(/\D/g,''); return n.indexOf(p)>=0 || (d && d.length===p.replace(/[.\-\/]/g,'').length && i.indexOf(d)>=0); });
+}
 function salvarFiltros(){ try{ localStorage.setItem('aud.filtros', JSON.stringify(filtros)); }catch(e){} }
 function renderLista(){
   if (!registro) return;
@@ -1720,13 +1727,12 @@ function renderLista(){
   seg('fTipo', [['todos','Todas ('+itens.length+')']].concat(TIPOS.map(function(t){ return [t[0], t[1]+' ('+cont(t[0])+')']; })), filtros.tipo, function(v){ filtros.tipo=v; salvarFiltros(); renderLista(); });
   seg('fEmp', [['todas','Todas'],['WEGEN','WeGen'],['SMARTBEN','SmartBen']], filtros.emp, function(v){ filtros.emp=v; salvarFiltros(); renderLista(); });
   seg('fStatus', [['todos','Todas'],['a_fazer','A fazer'],['feita','Com planilha']], filtros.status, function(v){ filtros.status=v; salvarFiltros(); renderLista(); });
-  var q=A.digits(filtros.busca)||filtros.busca.toLowerCase().trim();
   var vis=itens.filter(function(x){
     if (filtros.tipo!=='todos' && x.tipo!==filtros.tipo) return false;
     if (filtros.emp!=='todas' && x.empresa!==filtros.emp) return false;
     if (filtros.status==='a_fazer' && x.status==='feita') return false;
     if (filtros.status==='feita' && x.status!=='feita') return false;
-    if (q && (x.nome.toLowerCase().indexOf(q)<0 && String(x.instalacao).indexOf(q)<0)) return false;
+    if (!bate(filtros.busca, x.nome, x.instalacao)) return false;
     return true;
   });
   var box=$('lista'); box.innerHTML='';
@@ -1855,9 +1861,9 @@ function renderArvore(){
     Object.keys(tipos[tk]).sort().forEach(function(emp){
       var sub=document.createElement('div'); sub.className='emp'; sub.innerHTML='<span class="lbl">'+esc(emp)+'</span>'; box.appendChild(sub);
       tipos[tk][emp].sort(function(a,b){ return (parseInt(a.titulo)||0)-(parseInt(b.titulo)||0); }).forEach(function(p){
-        if (q && p.titulo.toLowerCase().indexOf(q)<0) return;
+        var itp=p.dados.item; if (q && !bate(q, p.titulo, itp && itp.instalacao)) return;
         var d=document.createElement('details'); d.className='pasta'; if (abrirAlvo===p.pasta) d.open=true;
-        d.innerHTML='<summary><span class="t">📁 '+esc(p.titulo)+'</span><span class="c">'+p.dados.arqs.length+' arquivo(s)</span></summary>';
+        d.innerHTML='<summary><span class="t">📁 '+esc(p.titulo)+(itp&&itp.instalacao?' <span class="small mono">· '+esc(itp.instalacao)+'</span>':'')+'</span><span class="c">'+p.dados.arqs.length+' arquivo(s)</span></summary>';
         var ul=document.createElement('ul'); ul.className='files';
         p.dados.arqs.forEach(function(f){ var nome=f.path.split('/').pop(); var li=document.createElement('li');
           li.innerHTML='<span class="fn">'+esc(nome)+'</span><span class="small">'+Math.max(1,Math.round((f.size||0)/1024))+' KB</span>';
