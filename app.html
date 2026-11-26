@@ -767,16 +767,14 @@ ul.files .fn{flex:1 1 220px;overflow-wrap:anywhere;font-size:14px}
     var cols = [];
     existing.forEach(function (e) {
       var match = usinas.filter(function (u) { return (e.code && u.code === e.code) || nk(u.name) === nk(e.name) || (!e.code && nk(sufixo(u.name)) === nk(e.name)); })[0];
+      // vale só o que está nos relatórios (pedido da Daniela, 26/11): nada da planilha antiga é mantido sem relatório
       if (match) {
-        var merged = {}; for (var k2 in e.data) merged[k2] = e.data[k2];
-        var kept = Object.keys(e.data).filter(function (k3) { return !(k3 in match.data); });
-        for (k2 in match.data) merged[k2] = match.data[k2];
-        if (kept.length) warnings.push('"' + match.name + '": ' + kept.length + ' mês(es) que já estavam na planilha e não aparecem no relatório foram mantidos (' + kept.map(function (x) { return label(+x); }).join(', ') + ').');
-        cols.push({ name: match.name, data: merged, source: 'relatório' + (e.name !== match.name ? ' (antes: "' + e.name + '")' : '') });
+        var tirados = Object.keys(e.data).filter(function (k3) { return e.data[k3] && !(k3 in match.data); });
+        if (tirados.length) warnings.push('"' + match.name + '": ' + tirados.length + ' mês(es) que estavam na planilha antiga e não aparecem em nenhum relatório foram retirados (' + tirados.map(function (x) { return label(+x); }).join(', ') + ').');
+        cols.push({ name: match.name, data: match.data, source: 'relatório' + (e.name !== match.name ? ' (antes: "' + e.name + '")' : '') });
         match._used = true;
-      } else if (Object.keys(e.data).length) {
-        cols.push({ name: e.name, data: e.data, source: 'mantida da planilha' });
-        warnings.push('A coluna "' + e.name + '" já estava na planilha do cliente e não foi encontrada nos relatórios lidos. Ela foi mantida como estava.');
+      } else if (Object.keys(e.data).some(function (k3) { return e.data[k3]; })) {
+        warnings.push('A coluna "' + e.name + '" estava na planilha antiga, mas não foi encontrada em nenhum relatório lido. Ela foi retirada.');
       }
     });
     usinas.filter(function (u) { return !u._used; }).sort(function (a, b) { return a.name.localeCompare(b.name); })
@@ -1749,7 +1747,9 @@ function renderLista(){
         (x.motivo?'<span class="small motivo">'+esc(x.motivo)+'</span>':'')+'</div></div>';
       var acts=document.createElement('div'); acts.className='aud-acts';
       if (x.instalacao){ var b1=document.createElement('button'); b1.type='button'; b1.className='btn primary-sm'; b1.textContent= x.status==='feita' ? 'Refazer auditoria' : 'Fazer auditoria';
-        b1.addEventListener('click', function(){ fazer(x, b1); }); acts.appendChild(b1); }
+        b1.addEventListener('click', function(){ fazer(x, b1); }); acts.appendChild(b1);
+        if (x.status==='feita'){ var b0=document.createElement('button'); b0.type='button'; b0.className='btn ghost'; b0.textContent='Refazer do zero';
+          b0.title='Gera a auditoria a partir da planilha modelo, sem usar a planilha salva'; b0.addEventListener('click', function(){ fazer(x, b0, true); }); acts.appendChild(b0); } }
       var b2=document.createElement('button'); b2.type='button'; b2.className='btn ghost'; b2.textContent='Arquivos ('+(x.arquivos||[]).length+')';
       b2.addEventListener('click', function(){ abrirPasta(x.pasta); }); acts.appendChild(b2);
       d.appendChild(acts); ul.appendChild(d);
@@ -1791,9 +1791,9 @@ async function baixarArquivo(caminho){
   var r=await gh(sessao.token,'GET',conteudo(REPO_DADOS,caminho),null,'application/vnd.github.raw');
   return await r.blob();
 }
-async function fazer(x, botao){
+async function fazer(x, botao, doZero){
   if (App.rodando()){ toast('Espere a auditoria em andamento terminar.'); return; }
-  var arq=null, xl=(x.arquivos||[]).filter(function(a){ return /\.xlsx$/i.test(a.nome); });
+  var arq=null, xl=doZero ? [] : (x.arquivos||[]).filter(function(a){ return /\.xlsx$/i.test(a.nome); });
   if (xl.length){
     botao.disabled=true; botao.textContent='Abrindo a planilha salva…';
     try{ var bl=await baixarArquivo(x.pasta+'/'+xl[0].nome); arq=new File([bl], xl[0].nome, { type:bl.type }); }
@@ -1863,7 +1863,24 @@ function renderArvore(){
           li.innerHTML='<span class="fn">'+esc(nome)+'</span><span class="small">'+Math.max(1,Math.round((f.size||0)/1024))+' KB</span>';
           var b=document.createElement('button'); b.type='button'; b.className='btn ghost'; b.textContent='Baixar';
           b.addEventListener('click', async function(){ b.disabled=true; try{ var bl=await baixarArquivo(f.path); var u=URL.createObjectURL(bl), a=document.createElement('a'); a.href=u; a.download=nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(u); },5000); }catch(e){ toast('Não consegui baixar: '+e.message); } b.disabled=false; });
-          li.appendChild(b); ul.appendChild(li); });
+          li.appendChild(b);
+          // excluir: dois cliques (o primeiro pede confirmação) — a exclusão não tem volta
+          var bx=document.createElement('button'); bx.type='button'; bx.className='btn ghost'; bx.textContent='Excluir'; bx.style.color='var(--erro, #b3261e)';
+          bx.addEventListener('click', async function(){
+            if (!bx.dataset.conf){ bx.dataset.conf='1'; bx.textContent='Confirmar exclusão'; clearTimeout(bx._t); bx._t=setTimeout(function(){ delete bx.dataset.conf; bx.textContent='Excluir'; }, 5000); return; }
+            clearTimeout(bx._t); bx.disabled=true; bx.textContent='Excluindo…';
+            try{
+              var sha=f.sha; try{ sha=(await (await gh(sessao.token,'GET',conteudo(REPO_DADOS,f.path))).json()).sha; }catch(e){ if (e.status===404){ sha=null; } else throw e; }
+              if (sha) await gh(sessao.token,'DELETE',conteudo(REPO_DADOS,f.path),{ message:'Arquivo excluído por '+sessao.nome+': '+nome, sha:sha });
+              arvore=arvore.filter(function(x){ return x.path!==f.path; });
+              var it=p.dados.item;
+              if (it){ it.arquivos=(it.arquivos||[]).filter(function(a){ return a.nome!==nome; });
+                if (!it.arquivos.some(function(a){ return /\.xlsx$/i.test(a.nome); }) && it.status==='feita') it.status='a_fazer'; renderLista(); }
+              toast(nome+' excluído.'); abrirAlvo=p.pasta; renderArvore();
+              setTimeout(function(){ carregarLista(true); }, 60000);
+            }catch(e){ bx.disabled=false; delete bx.dataset.conf; bx.textContent='Excluir'; toast('Não consegui excluir '+nome+': '+(e.status===401?'a chave de acesso expirou.':e.message)); }
+          });
+          li.appendChild(bx); ul.appendChild(li); });
         if (!p.dados.arqs.length){ var li0=document.createElement('li'); li0.className='small'; li0.textContent='Pasta vazia. A auditoria ainda não foi salva.'; ul.appendChild(li0); }
         var up=document.createElement('li'); var inp=document.createElement('input'); inp.type='file'; inp.multiple=true; inp.hidden=true;
         var bu=document.createElement('button'); bu.type='button'; bu.className='btn ghost'; bu.textContent='Enviar arquivo para esta pasta';
